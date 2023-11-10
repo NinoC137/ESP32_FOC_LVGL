@@ -6,15 +6,16 @@ uint16_t serverPort = 8888;
 
 String readTCP;
 
-BLEUUID ServiceUUID("ab1ad444-6724-11e9-a923-1681be663d3e");                                                                                        // 服务的UUID
-BLECharacteristic RX_Characteristics("ab1ad980-6724-11e9-a923-1681be663d3e", BLECharacteristic::PROPERTY_WRITE); // 接收字符串的特征值
-BLEDescriptor RX_Descriptor(BLEUUID((uint16_t)0x2901));                                                                                             // 接收字符串描述符
+BLEUUID ServiceUUID("ab1ad444-6724-11e9-a923-1681be663d3e");                                                                                         // 服务的UUID
+BLECharacteristic RX_Characteristics("ab1ad980-6724-11e9-a923-1681be663d3e", BLECharacteristic::PROPERTY_WRITE);                                     // 接收字符串的特征值
+BLEDescriptor RX_Descriptor(BLEUUID((uint16_t)0x2901));                                                                                              // 接收字符串描述符
 BLECharacteristic TX_Characteristics("ab1adb06-6724-11e9-a923-1681be663d3e", BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY); // 发送字符串的特征值
-BLEDescriptor TX_Descriptor(BLEUUID((uint16_t)0x2902));                                                                                             // 发送字符串描述符
+BLEDescriptor TX_Descriptor(BLEUUID((uint16_t)0x2902));                                                                                              // 发送字符串描述符
 
 std::string value;
-char *BLE_json_stringRoot;
-int DataUpgrateFlag;    //蓝牙唤起数据更新标志位
+char *BLE_json_root;
+char *WiFi_json_root;
+int DataUpgrateFlag; // 蓝牙唤起数据更新标志位
 
 // WiFi信息存储对象, 存储3个WiFi信息
 WiFiData WiFi_Data;
@@ -32,7 +33,6 @@ int my_timezone = 8;
 long gmtOffset_sec = my_timezone * 3600;
 const int daylightOffset_sec = 0; // 夏令时填写3600，否则填0
 struct tm timeinfo;
-
 
 void MyServerCallbacks::onConnect(BLEServer *pServer) // 开始连接函数
 {
@@ -77,14 +77,14 @@ void WiFi_BLE_setUp()
     Serial.print("IPv4 address:");
     Serial.println(WiFi_Data.WiFi_store[0].ipv4);
     Serial.print("Mac:");
-    Serial.printf("%s\r\n",WiFi_Data.WiFi_store[0].MacAddress.c_str());
+    Serial.printf("%s\r\n", WiFi_Data.WiFi_store[0].MacAddress.c_str());
     Serial.print("devID:");
-    Serial.printf("%s\r\n",WiFi_Data.WiFi_store[0].devID.c_str());
+    Serial.printf("%s\r\n", WiFi_Data.WiFi_store[0].devID.c_str());
 
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-    BLEDevice::init(bleServer); // 初始化BLE客户端设备
-    BLEServer *pServer = BLEDevice::createServer();             // BLEServer指针，创建Server
+    BLEDevice::init(bleServer);                     // 初始化BLE客户端设备
+    BLEServer *pServer = BLEDevice::createServer(); // BLEServer指针，创建Server
     BLEDevice::setMTU(256);
     BLEService *pService = pServer->createService(ServiceUUID); // BLEService指针，创建Service
 
@@ -106,6 +106,11 @@ void WiFi_BLE_setUp()
 
     pService->start();
     pServer->getAdvertising()->start();
+
+    std::stringstream urlStream;
+    urlStream << "http://" << WiFi_Data.serverip << ":" << WiFi_Data.serverport;
+
+    http.begin(urlStream.str().c_str()); // 连接服务器对应域名
 }
 
 void BLEHandler()
@@ -113,9 +118,9 @@ void BLEHandler()
     // 蓝牙信息处理部分  --  注意手机发送端的MTU应设置为256(反正不要是默认的23字节,json包发不过去也读不回来)
     if (value.length() > 0)
     {
-        BLE_json_stringRoot = (char *)value.data();
+        BLE_json_root = (char *)value.data();
         // Serial.printf("json string: %s\r\n value: %s\r\n", json_string, value.c_str());
-        cJSON *root = cJSON_Parse(BLE_json_stringRoot);
+        cJSON *root = cJSON_Parse(BLE_json_root);
         if (root == NULL)
         {
             Serial.printf("Error before: [%s]\n", cJSON_GetErrorPtr());
@@ -168,10 +173,10 @@ void BLEHandler()
             cmd15(root);
             break;
         case 16:
-            cmd16(root);
+            cmd16();
             break;
         case 17:
-            cmd17(root);
+            cmd17();
             break;
         case 19:
             cmd19(root);
@@ -192,13 +197,83 @@ void WiFiHandler()
 {
     // WIFI连接服务器部分
     int httpCode = http.GET();
-    if (httpCode > 0) // HTTP请求无异常
+    if (httpCode > 0)
     {
-        if (httpCode == HTTP_CODE_OK)
+        if (httpCode == HTTP_CODE_OK) // HTTP请求无异常
         {
-            String payload = http.getString(); // 读取get到的json串
+            WiFi_json_root = (char *)http.getString().c_str(); // 读取get到的json串
+            Serial.println(WiFi_json_root);
 
-            Serial.println(payload);
+            std::string post_Payload("ESP32 POST TEST");
+
+            cJSON *root = cJSON_Parse(WiFi_json_root);
+            if (root == NULL)
+            {
+                Serial.printf("Error before: [%s]\n", cJSON_GetErrorPtr());
+            }
+            cJSON *cmd = cJSON_GetObjectItem(root, "cmd");
+
+            switch (cmd->valueint)
+            {
+            case 1:
+                cmd1();
+                break;
+            case 2:
+                cmd2(root);
+                break;
+            case 3:
+                cmd3(root);
+                break;
+            case 4:
+                cmd4(root);
+                break;
+            case 5:
+                cmd5(root);
+                break;
+            case 6:
+                cmd6(root);
+                break;
+            case 7:
+                cmd7(root);
+                break;
+            case 8:
+                cmd8(root);
+                break;
+            case 9:
+                cmd9(root);
+                break;
+            case 10:
+                cmd10(root);
+                break;
+            case 12:
+                cmd12(root);
+                break;
+            case 13:
+                cmd13(root);
+                break;
+            case 14:
+                cmd14(root);
+                break;
+            case 15:
+                cmd15(root);
+                break;
+            case 16:
+                cmd16();
+                break;
+            case 17:
+                cmd17();
+                break;
+            case 19:
+                cmd19(root);
+                break;
+            default:
+                Serial.printf("error cmd!\r\n");
+                
+                http.POST(post_Payload.c_str());
+                break;
+            }
+
+            cJSON_Delete(root);
         }
     }
 }
@@ -209,14 +284,15 @@ void ProjectDataUpdate()
     updateLocalTime();
     static int cnt_dataupdate;
 
-    if(ProjectData.runTime >= ProjectData.worktime){
+    if (ProjectData.runTime >= ProjectData.worktime)
+    {
         ProjectData.switchStatus = 0;
     }
 
     if (ProjectData.switchStatus == 1)
     {
         cnt_dataupdate++;
-        if (cnt_dataupdate >= 200)  //执行一轮代码大概耗时5ms 200次计数即时间+1秒
+        if (cnt_dataupdate >= 200) // 执行一轮代码大概耗时5ms 200次计数即时间+1秒
         {
             ProjectData.runTime += 1;
             cnt_dataupdate = 0;
@@ -231,13 +307,9 @@ void HeartBeatUpdate()
     if (HeartBeat.keepAliveTime != 0)
     {
         cnt_heartbeat++;
-        if (cnt_heartbeat >= HeartBeat.keepAliveTime / 5)
+        if (cnt_heartbeat >= HeartBeat.keepAliveTime * 200) // 5ms cnt+1 所以将心跳时间(秒为单位)放大200倍, 即可符合单位变换
         {
-            HeartBeat.keepLiveCnt++;
-            sprintf(heartbeat_str, "HeartBeat, cnt: %d", HeartBeat.keepLiveCnt);
-            TX_Characteristics.setValue(heartbeat_str);
-            TX_Characteristics.notify();
-
+            cmd17();
             cnt_heartbeat = 0;
         }
     }

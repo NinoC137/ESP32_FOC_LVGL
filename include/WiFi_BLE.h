@@ -31,15 +31,15 @@ public:
     std::string devID;
   };
 
-  std::string serverip;
-  int serverport;
+  std::string serverip = "iot.lyhctech.com";
+  int serverport = 6588;
 
   WiFiIndex WiFi_store[3];
 };
 
 class HeartBeatPacket{  //心跳包
 public:
-  long keepAliveTime;
+  long keepAliveTime = 100;
   long keepLiveCnt;
 };
 
@@ -84,7 +84,8 @@ extern long gmtOffset_sec;
 extern struct tm timeinfo;
 
 extern std::string value;
-extern char *json_string;
+extern char *BLE_json_root;
+extern char *WiFi_json_root;
 extern int DataUpgrateFlag; //蓝牙唤起数据更新
 
 extern BLEUUID ServiceUUID;
