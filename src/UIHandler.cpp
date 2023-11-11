@@ -12,7 +12,11 @@ void sliderHandler()
     {
         DataUpgrateFlag = 0;
         lv_arc_set_value(guider_ui.btn_1_arc_1, (ProjectData.speed/11.0f));  //设定风速滑条 参数2为将百转单位归一化到0~100
+        if((ProjectData.temp - 50)/1.2f >= 0){
         lv_arc_set_value(guider_ui.btn_1_temperate, (ProjectData.temp - 50)/1.2f);
+        }else{
+            lv_arc_set_value(guider_ui.btn_1_temperate, 0);
+        }
         lv_obj_add_state(guider_ui.btn_1_sw_1, ProjectData.switchStatus);
     }
     else    //如果没有发生数据更新,则直接读取各控件的值
