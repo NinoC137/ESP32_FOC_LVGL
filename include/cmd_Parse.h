@@ -35,6 +35,8 @@ void cmd16(); // 通过WiFi向服务器发送事件日志
 
 void cmd17(); // 通过蓝牙想宿主机发送事件日志
 
+void cmd18(cJSON *root); // 设定CRC校验
+
 void cmd19(cJSON *root); // 初始化设备信息
 
 #endif // !_CMD_PARSE_H

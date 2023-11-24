@@ -22,7 +22,7 @@ void WIFIWrite2EEPROM();
 void ModuleEnable();
 
 static lv_disp_draw_buf_t draw_buf;     // 定义显示器变量完
-static lv_color_t buf[TFT_WIDTH * 100]; // 定义刷新缓存
+static lv_color_t buf[TFT_WIDTH * 300]; // 定义刷新缓存
 
 #define TOUCH_SDA 14
 #define TOUCH_SCL 21
@@ -414,7 +414,7 @@ void ModuleEnable()
         speechCounter += 300;
         break;
       case 4:
-        if (Temp1 != 13)
+        if (Temp1 > 30)
           TemperateSpeech(Temp1);
         break;
 

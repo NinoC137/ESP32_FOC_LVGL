@@ -8,18 +8,31 @@ void sliderHandler()
     static int TemperateDutyValue;
 
     lv_mem_buf_free_all();
-    if (DataUpgrateFlag == 1)   //如果发生了数据更新, 则先为各个控件赋值
+    if (DataUpgrateFlag == 1) // 如果发生了数据更新, 则先为各个控件赋值
     {
         DataUpgrateFlag = 0;
-        lv_arc_set_value(guider_ui.btn_1_arc_1, (ProjectData.speed/11.0f));  //设定风速滑条 参数2为将百转单位归一化到0~100
-        if((ProjectData.temp - 50)/1.2f >= 0){
-        lv_arc_set_value(guider_ui.btn_1_temperate, (ProjectData.temp - 50)/1.2f);
-        }else{
+
+        switchState = ProjectData.switchStatus;
+        if (switchState == 1)
+        {
+            lv_obj_add_state(guider_ui.btn_1_sw_1, LV_STATE_CHECKED);
+        }
+        else
+        {
+            lv_obj_clear_state(guider_ui.btn_1_sw_1, LV_STATE_CHECKED);
+        }
+
+        lv_arc_set_value(guider_ui.btn_1_arc_1, (ProjectData.speed / 11.0f)); // 设定风速滑条 参数2为将百转单位归一化到0~100
+        if ((ProjectData.temp - 50) / 1.2f >= 0)
+        {
+            lv_arc_set_value(guider_ui.btn_1_temperate, (ProjectData.temp - 50) / 1.2f);
+        }
+        else
+        {
             lv_arc_set_value(guider_ui.btn_1_temperate, 0);
         }
-        lv_obj_add_state(guider_ui.btn_1_sw_1, ProjectData.switchStatus);
     }
-    else    //如果没有发生数据更新,则直接读取各控件的值
+    else // 如果没有发生数据更新,则直接读取各控件的值
     {
         // switch    on: 1   off: 0
         switchState = lv_obj_has_state(guider_ui.btn_1_sw_1, LV_STATE_CHECKED);
@@ -53,11 +66,11 @@ void sliderHandler()
     // snprintf(TemperateBuf, 4, "%d", eepromValue);
     lv_label_set_text(guider_ui.btn_1_label_7, TemperateBuf);
 
-    if (distanceFlag != 1)
-    {
-        lv_obj_clear_state(guider_ui.btn_1_sw_1, LV_STATE_CHECKED);
-        switchState == false;
-    }
+    // if (distanceFlag != 1)
+    // {
+    //     lv_obj_clear_state(guider_ui.btn_1_sw_1, LV_STATE_CHECKED);
+    //     switchState == false;
+    // }
 
     // 输出风速(配合开关状态)
     if (switchState == true)
@@ -71,7 +84,7 @@ void sliderHandler()
         SpeedControl(dutyValue);
         TemperateControl(tempsliderValue, tempsliderValue); // 输出指定占空比的PWM
         speechFlag = 1;
-        gTemplePower = dutyValue * 15 / 10;
+        gTemplePower = slider_value * 15 / 10;
     }
     else
     { // 表格1内容填充

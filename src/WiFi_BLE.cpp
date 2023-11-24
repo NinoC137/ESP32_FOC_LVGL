@@ -25,6 +25,11 @@ HTTPClient http;
 HeartBeatPacket HeartBeat;
 // 事件日志包, 存储各类信息
 ProjectDataPacket ProjectData;
+// CRC+MD5校验信息
+char md5CRC[32] = {0};
+int CRC_CHECKED = 0;
+
+MD5Builder md5Check;
 
 //-----------网络时间获取-----------//
 const char *ntpServer = "pool.ntp.org"; // 网络时间服务器
@@ -73,6 +78,15 @@ void WiFi_BLE_setUp()
     {
         ProjectData.wifistatus = false;
     }
+
+    // 生成初始CRC值
+    sprintf(md5CRC, "%sOhz8Eese", WiFi_Data.WiFi_store[0].devID);
+    md5Check.begin();
+    md5Check.add((uint8_t *)md5CRC, strlen(md5CRC));
+    md5Check.calculate();
+    char key_crc[64] = {0};
+    md5Check.getChars(key_crc);
+    ProjectData.old_CRC = std::string(key_crc);
 
     Serial.print("IPv4 address:");
     Serial.println(WiFi_Data.WiFi_store[0].ipv4);
@@ -143,10 +157,26 @@ void BLEHandler()
             cmd4(root);
             break;
         case 5:
-            cmd5(root);
+            if (CRC_CHECKED == 1)
+            {
+                cmd5(root);
+            }
+            else
+            {
+                TX_Characteristics.setValue("CRC NOT PASS!");
+                TX_Characteristics.notify();
+            }
             break;
         case 6:
-            cmd6(root);
+            if (CRC_CHECKED == 1)
+            {
+                cmd6(root);
+            }
+            else
+            {
+                TX_Characteristics.setValue("CRC NOT PASS!");
+                TX_Characteristics.notify();
+            }
             break;
         case 7:
             cmd7(root);
@@ -155,19 +185,43 @@ void BLEHandler()
             cmd8(root);
             break;
         case 9:
-            cmd9(root);
+            if (CRC_CHECKED == 1)
+            {
+                cmd9(root);
+            }
+            else
+            {
+                TX_Characteristics.setValue("CRC NOT PASS!");
+                TX_Characteristics.notify();
+            }
             break;
         case 10:
             cmd10(root);
             break;
         case 12:
-            cmd12(root);
+            if (CRC_CHECKED == 1)
+            {
+                cmd12(root);
+            }
+            else
+            {
+                TX_Characteristics.setValue("CRC NOT PASS!");
+                TX_Characteristics.notify();
+            }
             break;
         case 13:
             cmd13(root);
             break;
         case 14:
-            cmd14(root);
+            if (CRC_CHECKED == 1)
+            {
+                cmd14(root);
+            }
+            else
+            {
+                TX_Characteristics.setValue("CRC NOT PASS!");
+                TX_Characteristics.notify();
+            }
             break;
         case 15:
             cmd15(root);
@@ -177,6 +231,9 @@ void BLEHandler()
             break;
         case 17:
             cmd17();
+            break;
+        case 18:
+            cmd18(root);
             break;
         case 19:
             cmd19(root);
@@ -228,10 +285,26 @@ void WiFiHandler()
                 cmd4(root);
                 break;
             case 5:
-                cmd5(root);
+                if (CRC_CHECKED == 1)
+                {
+                    cmd5(root);
+                }
+                else
+                {
+                    TX_Characteristics.setValue("CRC NOT PASS!");
+                    TX_Characteristics.notify();
+                }
                 break;
             case 6:
-                cmd6(root);
+                if (CRC_CHECKED == 1)
+                {
+                    cmd6(root);
+                }
+                else
+                {
+                    TX_Characteristics.setValue("CRC NOT PASS!");
+                    TX_Characteristics.notify();
+                }
                 break;
             case 7:
                 cmd7(root);
@@ -240,19 +313,43 @@ void WiFiHandler()
                 cmd8(root);
                 break;
             case 9:
-                cmd9(root);
+                if (CRC_CHECKED == 1)
+                {
+                    cmd9(root);
+                }
+                else
+                {
+                    TX_Characteristics.setValue("CRC NOT PASS!");
+                    TX_Characteristics.notify();
+                }
                 break;
             case 10:
                 cmd10(root);
                 break;
             case 12:
-                cmd12(root);
+                if (CRC_CHECKED == 1)
+                {
+                    cmd12(root);
+                }
+                else
+                {
+                    TX_Characteristics.setValue("CRC NOT PASS!");
+                    TX_Characteristics.notify();
+                }
                 break;
             case 13:
                 cmd13(root);
                 break;
             case 14:
-                cmd14(root);
+                if (CRC_CHECKED == 1)
+                {
+                    cmd14(root);
+                }
+                else
+                {
+                    TX_Characteristics.setValue("CRC NOT PASS!");
+                    TX_Characteristics.notify();
+                }
                 break;
             case 15:
                 cmd15(root);
@@ -263,12 +360,15 @@ void WiFiHandler()
             case 17:
                 cmd17();
                 break;
+            case 18:
+                cmd18(root);
+                break;
             case 19:
                 cmd19(root);
                 break;
             default:
                 Serial.printf("error cmd!\r\n");
-                
+
                 http.POST(post_Payload.c_str());
                 break;
             }

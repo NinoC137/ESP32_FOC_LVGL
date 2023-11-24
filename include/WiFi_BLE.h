@@ -10,6 +10,7 @@
 
 #include "cJSON.h"
 #include "cmd_Parse.h"
+#include "MD5Builder.h"
 
 #include <BLEDevice.h>
 #include <BLE2902.h>
@@ -56,6 +57,8 @@ public:
   int runTime;  //单位为秒
 
   std::string device_ID;
+
+  std::string old_CRC;
 };
 
 class MyServerCallbacks : public BLEServerCallbacks // 创建连接和断开调用类
@@ -87,6 +90,7 @@ extern std::string value;
 extern char *BLE_json_root;
 extern char *WiFi_json_root;
 extern int DataUpgrateFlag; //蓝牙唤起数据更新
+extern int CRC_CHECKED;
 
 extern BLEUUID ServiceUUID;
 extern BLECharacteristic RX_Characteristics;

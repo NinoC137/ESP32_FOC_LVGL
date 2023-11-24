@@ -99,8 +99,13 @@ void cmd3(cJSON *root) // 读取设备保存的WiFi(一个)
 
 void cmd4(cJSON *root) // 启/停设备
 {
+    cJSON *tx_root = cJSON_CreateObject();
     cJSON *cmd_switch = cJSON_GetObjectItem(root, "switch");
     cJSON *cmd_worktime = cJSON_GetObjectItem(root, "worktime");
+    /**************************************/
+    /*************新增CRC******************/
+    cJSON *cmd_newCRC = cJSON_GetObjectItem(root, "new_crc");
+    /**************************************/
     if (cmd_switch == NULL || cmd_worktime == NULL)
     {
         TX_Characteristics.setValue("json string error!!");
@@ -112,13 +117,28 @@ void cmd4(cJSON *root) // 启/停设备
     ProjectData.worktime = cmd_worktime->valueint;
     ProjectData.runTime = 0;
 
-    cJSON *tx_root = cJSON_CreateObject();
-    cJSON_AddItemToObject(tx_root, "res", cJSON_CreateNumber(0));
-    cJSON_AddItemToObject(tx_root, "cmd", cJSON_CreateNumber(4));
+    /*************新增CRC******************/
+    if (std::string(cmd_newCRC->valuestring) == ProjectData.old_CRC)
+    {
+        CRC_CHECKED = 1; // CRC验证通过
+        cJSON_AddItemToObject(tx_root, "res", cJSON_CreateNumber(0));
+        cJSON_AddItemToObject(tx_root, "cmd", cJSON_CreateNumber(4));
+    }
+    else
+    {
+        CRC_CHECKED = 0;
+        cJSON_AddItemToObject(tx_root, "res", cJSON_CreateNumber(-1));
+        cJSON_AddItemToObject(tx_root, "cmd", cJSON_CreateNumber(4));
+    }
+    /**************************************/
+
     char *json_string = cJSON_Print(tx_root);
     // 生成完毕, 准备发送
     TX_Characteristics.setValue(json_string);
     TX_Characteristics.notify();
+
+    DataUpgrateFlag = 1;
+    
 #if DEBUG
     Serial.printf("%s\r\n", json_string);
 #endif // DEBUG
@@ -388,7 +408,8 @@ void cmd15(cJSON *root) // 读取心跳包设置
 void cmd16() // 通过WiFi向服务器发送事件日志
 {
     cJSON *tx_root = cJSON_CreateObject();
-    cJSON_AddItemToObject(tx_root, "device_id", cJSON_CreateString(ProjectData.device_ID.c_str()));
+    // cJSON_AddItemToObject(tx_root, "device_id", cJSON_CreateString(ProjectData.device_ID.c_str()));
+    cJSON_AddItemToObject(tx_root, "device_id", cJSON_CreateString(WiFi_Data.WiFi_store[0].devID.c_str()));
     cJSON_AddItemToObject(tx_root, "blestatus", cJSON_CreateNumber(ProjectData.blestatus));
     cJSON_AddItemToObject(tx_root, "wifistatus", cJSON_CreateNumber(ProjectData.wifistatus));
     cJSON_AddItemToObject(tx_root, "switch", cJSON_CreateNumber(ProjectData.switchStatus));
@@ -409,7 +430,8 @@ void cmd16() // 通过WiFi向服务器发送事件日志
 void cmd17() // 通过蓝牙向宿主机发送事件日志
 {
     cJSON *tx_root = cJSON_CreateObject();
-    cJSON_AddItemToObject(tx_root, "device_id", cJSON_CreateString(ProjectData.device_ID.c_str()));
+    // cJSON_AddItemToObject(tx_root, "device_id", cJSON_CreateString(ProjectData.device_ID.c_str()));
+    cJSON_AddItemToObject(tx_root, "device_id", cJSON_CreateString(WiFi_Data.WiFi_store[0].devID.c_str()));
     cJSON_AddItemToObject(tx_root, "blestatus", cJSON_CreateNumber(ProjectData.blestatus));
     cJSON_AddItemToObject(tx_root, "wifistatus", cJSON_CreateNumber(ProjectData.wifistatus));
     cJSON_AddItemToObject(tx_root, "switch", cJSON_CreateNumber(ProjectData.switchStatus));
@@ -422,6 +444,46 @@ void cmd17() // 通过蓝牙向宿主机发送事件日志
     TX_Characteristics.notify();
 #if DEBUG
     Serial.printf("%s\r\n", json_string);
+#endif // DEBUG
+    cJSON_Delete(tx_root);
+    free(json_string);
+}
+
+void cmd18(cJSON *root)
+{
+    cJSON *cmd_oldCRC = cJSON_GetObjectItem(root, "old_crc");
+    cJSON *cmd_newCRC = cJSON_GetObjectItem(root, "new_crc");
+
+    cJSON *tx_root = cJSON_CreateObject();
+    if (cmd_oldCRC == NULL || cmd_newCRC == NULL)
+    {
+        TX_Characteristics.setValue("json string error!!");
+        TX_Characteristics.notify();
+        return;
+    }
+
+    if (std::string(cmd_oldCRC->valuestring) == ProjectData.old_CRC) // 传入的old_CRC是正确的, 匹配原本的CRC值
+    {
+        ProjectData.old_CRC = std::string(cmd_newCRC->valuestring); // 替换新的CRC
+        CRC_CHECKED = 1;                                            // CRC验证通过
+
+        cJSON_AddItemToObject(tx_root, "res", cJSON_CreateNumber(0));
+        cJSON_AddItemToObject(tx_root, "cmd", cJSON_CreateNumber(18));
+    }
+    else
+    {
+        CRC_CHECKED = 0;
+        cJSON_AddItemToObject(tx_root, "res", cJSON_CreateNumber(-1));
+        cJSON_AddItemToObject(tx_root, "cmd", cJSON_CreateNumber(18));
+    }
+
+    char *json_string = cJSON_Print(tx_root);
+    // 生成完毕, 准备发送
+    TX_Characteristics.setValue(json_string);
+    TX_Characteristics.notify();
+#if DEBUG
+    Serial.printf("%s\r\n", json_string);
+    Serial.printf("old crc:%s", ProjectData.old_CRC.c_str());
 #endif // DEBUG
     cJSON_Delete(tx_root);
     free(json_string);
